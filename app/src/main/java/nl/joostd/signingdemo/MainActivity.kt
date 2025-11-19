@@ -96,7 +96,7 @@ fun CryptoScreen(
 
     // --- Cryptographic Functions ---
 
-    @RequiresApi(Build.VERSION_CODES.P)
+    @RequiresApi(Build.VERSION_CODES.S)
     fun generateKeys() {
         try {
             val keyStore = KeyStore.getInstance("AndroidKeyStore")
@@ -333,12 +333,10 @@ fun displayHardware() {
     val context = LocalContext.current
     val hasStrongbox = context.packageManager.hasSystemFeature(FEATURE_STRONGBOX_KEYSTORE)
     val txt = if (hasStrongbox) "✅ Strongbox supported!" else "❌ Strongbox not supported"
-    val version =
-            "hasStrongbox: " + hasStrongbox
-        Text(
-            text = txt,
-            modifier = Modifier.padding(5.dp),
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold
-        )
+    Text(
+        text = txt,
+        modifier = Modifier.padding(5.dp),
+        fontSize = 20.sp,
+        fontWeight = FontWeight.Bold
+    )
 }

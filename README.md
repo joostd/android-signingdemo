@@ -1,4 +1,4 @@
-# Signign Demo
+# Signing Demo
 
 A simple Android app that demonstrates the use of the Android Keystore for protecting cryptographic keys.
 

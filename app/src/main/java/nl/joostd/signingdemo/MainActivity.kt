@@ -85,6 +85,7 @@ fun CryptoScreen(
     var signatureData by remember { mutableStateOf<ByteArray?>(null) }
     var attestation by remember { mutableStateOf<ByteArray?>(null) }
     var statusMessage by remember { mutableStateOf("App Started. Click 'Generate Keys' to begin.") }
+    val hasStrongbox = LocalContext.current.packageManager.hasSystemFeature(FEATURE_STRONGBOX_KEYSTORE)
 
     // This is the data we will sign
     val messageToSign = "Hello, ECDSA! This message will be signed.".toByteArray()
@@ -116,7 +117,7 @@ fun CryptoScreen(
             )
                 .setDigests(KeyProperties.DIGEST_SHA256)
                 // P-256 is used by default for SHA256withECDSA
-                .setIsStrongBoxBacked(true) // this key should be protected by a StrongBox security chip.
+                .setIsStrongBoxBacked(hasStrongbox) // if possible, this key should be protected by a StrongBox security chip.
                 .setUserPresenceRequired(false)
                 .setUserConfirmationRequired(false)
                 .setUnlockedDeviceRequired(true)
@@ -137,6 +138,7 @@ fun CryptoScreen(
             try {
                 val keyInfo: KeyInfo = factory.getKeySpec(key, KeyInfo::class.java)
                 Log.d("keygen", "origin generated: " + if (keyInfo.origin == ORIGIN_GENERATED) "yes" else "no")
+                Log.d("keygen", "securityLevel: " + keyInfo.securityLevel)
                 Log.d("keygen", "strongbox: " + if (keyInfo.securityLevel == SECURITY_LEVEL_STRONGBOX) "yes" else "no")
             } catch (e: Exception) {
                 // Not an Android KeyStore key.

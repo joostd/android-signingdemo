@@ -235,3 +235,61 @@ SEQUENCE {
 ```
 
 See [here](https://source.android.com/docs/security/features/keystore/attestation#schema) for documentation of the schema.
+
+## Converting to JSON
+
+To make the above attestation more readable, convert the KeyDescription to JSON.
+See the file [KeyDescription.asn1](KeyDescription.asn1), adapted from [Version 300 of the schmema](https://source.android.com/docs/security/features/keystore/attestation#attestation-v300).
+
+For this, we use [asn1tools](https://pypi.org/project/asn1tools/).
+
+Save the hex-encoded X.509 extension attribute value in an environment variable:
+
+```
+$ HEX=$(step certificate inspect certs.pem -format json | jq '.unknown_extensions[] | select (.id == "1.3.6.1.4.1.11129.2.1.17") | .value' -r | base64 -d | xxd -p -c0)
+```
+
+Then, convert the Key Description using JSON Encoding Rules (JER):
+
+```
+$ asn1tools convert -o jer KeyDescription.asn1 KeyDescription $HEX
+{
+    "attestationVersion": 300,
+    "attestationSecurityLevel": "strongBox",
+    "keyMintVersion": 300,
+    "keymintSecurityLevel": "strongBox",
+    "attestationChallenge": "6A881956283068C6353FFBCFEB09D02232AA8074",
+    "uniqueId": "",
+    "softwareEnforced": {
+        "creationDateTime": 1764251888558,
+        "attestationApplicationId": "3042311C301A04156E6C2E6A6F6F7374642E7369676E696E6764656D6F02010131220420FA4C1D8EFA8ADE32953AD6C84B11F435DB8275DEF6099685361CBFA1577D0895"
+    },
+    "hardwareEnforced": {
+        "purpose": [
+            2,
+            3
+        ],
+        "algorithm": 3,
+        "keySize": 256,
+        "digest": [
+            4
+        ],
+        "ecCurve": 1,
+        "noAuthRequired": null,
+        "unlockedDeviceReq": null,
+        "origin": 0,
+        "rootOfTrust": {
+            "verifiedBootKey": "9AC4174153D45E4545B0F49E22FE63273999B6AC1CB6949C3A9F03EC8807EEE9",
+            "deviceLocked": true,
+            "verifiedBootState": "verified",
+            "verifiedBootHash": "69C9D4748AC6FF48341FB862BA4EB0D21F19198698D175EEF5DF183A62195CB3"
+        },
+        "osVersion": 160000,
+        "osPatchLevel": 202509,
+        "vendorPatchLevel": 20250905,
+        "bootPatchLevel": 20250905
+    }
+}
+```
+
+See [here](https://source.android.com/docs/security/features/keystore/attestation#keydescription-fields) for a reference of the Key Description fields.

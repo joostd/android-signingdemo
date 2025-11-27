@@ -60,7 +60,8 @@ Use OpenSSL to extract the details of the public key:
 
 ```
 $ echo 3059301306072a8648ce3d020106082a8648ce3d03010703420004e7ff40b4e42357d889c5b172f06b1826daee73\
->      816a408e70796eb539ea1793f75a25a59a03e162fe1d9ceb7b4bfdaa61914f2658a3e7c3d3948e67f54ade9056 | xxd -r -p | openssl pkey -pubin -noout -text
+>      816a408e70796eb539ea1793f75a25a59a03e162fe1d9ceb7b4bfdaa61914f2658a3e7c3d3948e67f54ade9056 \
+> | xxd -r -p | openssl pkey -pubin -noout -text
 Public-Key: (256 bit)
 pub:
     04:e7:ff:40:b4:e4:23:57:d8:89:c5:b1:72:f0:6b:
@@ -100,19 +101,25 @@ grep -v '#' attest.log | while read line; do echo $line | xxd -r -p | openssl x5
 ```
 
 The first certificate is the attestation, followed by the chain (in leaf to root order, i.e. the last certificate is the root).
+Extract the attestation certificate using OpenSSL:
 
-The trusted root certificates must be one of the well-known roots, and they can be retrieved as follows:
+```
+openssl x509 -in certs.pem -out attestation.pem
+```
+
+(Note that `openssl x509` only considers the first certificate in the file, which is the attestation certificate)
+
+The root certificate must be one of the well-known roots, and they can be retrieved as follows:
 
 ```
 curl https://android.googleapis.com/attestation/root | jq .[] -r > roots.pem
 ```
 
-To validate the chain, use `openssl verify`. 
-For instance, on a Pixel 6a device:
+To validate the chain, use `openssl verify`:
 
 ```
-$ openssl verify -show_chain -CAfile roots -untrusted certs.pem cert0
-cert0: OK
+$ openssl verify -show_chain -CAfile roots.pem -untrusted certs.pem attestation.pem
+attestation.pem: OK
 Chain:
 depth=0: CN=Android Keystore Key (untrusted)
 depth=1: title=StrongBox, serialNumber=06842f84bcbadbd196405bfd6a6349eb (untrusted)
@@ -120,15 +127,16 @@ depth=2: title=StrongBox, serialNumber=f3df197b141c9347c7daf0375ec0f949 (untrust
 depth=3: serialNumber=f92009e853b6b045
 ```
 
+(This example was generated on a Pixel 6a device.)
+
 See also [here](https://developer.android.com/privacy-and-security/security-key-attestation#root_certificate)
 
 # Attestation
 
-Note that the public key in the attestation certificate should match the public key retrieved earlier
-(Note that `openssl x509` only considers the first certificate in the file, which is the attestation certificate):
+Note that the public key in the attestation certificate should match the public key retrieved earlier:
 
 ```
-$ openssl x509 -in certs.pem -noout -pubkey | openssl pkey -noout -pubin -text
+$ openssl x509 -in attestation.pem -noout -pubkey | openssl pkey -noout -pubin -text
 Public-Key: (256 bit)
 pub:
     04:e7:ff:40:b4:e4:23:57:d8:89:c5:b1:72:f0:6b:

@@ -9,8 +9,9 @@ For this demo however, we simply log everything and validate by hand (see below)
 - clone this repository
 
 ```bash
-git clone git@github.com:joostd/android-signingdemo.git
-cd android-signingdemo/
+$ git clone git@github.com:joostd/android-signingdemo.git
+...
+$ cd android-signingdemo/
 ```
 
 - connect an Android device (in debug mode)
@@ -18,7 +19,8 @@ cd android-signingdemo/
 - build and install
 
 ```bash
-./gradlew installDebug
+$ ./gradlew installDebug
+...
 ```
 
 ## Troubleshooting
@@ -36,8 +38,10 @@ Alternatively, download the latest .apk file from
 and use adb to install
 
 ```bash
-wget https://github.com/joostd/android-signingdemo/releases/download/v0.0.1-alpha/app-debug.apk
-adb install app-debug.apk
+$ wget https://github.com/joostd/android-signingdemo/releases/download/v0.0.1-alpha/app-debug.apk
+...
+$ adb install app-debug.apk
+...
 ```
 
 and start SigningDemo on your Android device.
@@ -80,7 +84,8 @@ Attestations are written to the Debug log whenever the "Attest Key" button is ta
 To retrieve those certificates, use adb:
 
 ```
-adb logcat -v raw -s attest
+$ adb logcat -v raw -s attest
+...
 ```
 
 This will show a number of hex-encoded certificates
@@ -97,14 +102,14 @@ The first certificate is the attestation itself, followed by a CA chain.
 To inspect the attestation, first save the chain to a file (eg `attest.log`), and re-encode the certificates into PEM format:
 
 ```
-grep -v '#' attest.log | while read line; do echo $line | xxd -r -p | openssl x509; done > certs.pem
+$ grep -v '#' attest.log | while read line; do echo $line | xxd -r -p | openssl x509; done > certs.pem
 ```
 
 The first certificate is the attestation, followed by the chain (in leaf to root order, i.e. the last certificate is the root).
 Extract the attestation certificate using OpenSSL:
 
 ```
-openssl x509 -in certs.pem -out attestation.pem
+$ openssl x509 -in certs.pem -out attestation.pem
 ```
 
 (Note that `openssl x509` only considers the first certificate in the file, which is the attestation certificate)
@@ -112,7 +117,7 @@ openssl x509 -in certs.pem -out attestation.pem
 The root certificate must be one of the well-known roots, and they can be retrieved as follows:
 
 ```
-curl https://android.googleapis.com/attestation/root | jq .[] -r > roots.pem
+$ curl https://android.googleapis.com/attestation/root | jq .[] -r > roots.pem
 ```
 
 To validate the chain, use `openssl verify`:
@@ -130,6 +135,92 @@ depth=3: serialNumber=f92009e853b6b045
 (This example was generated on a Pixel 6a device.)
 
 See also [here](https://developer.android.com/privacy-and-security/security-key-attestation#root_certificate)
+
+Note that chain validation will only work on physical Android devices. 
+Android emulators will use software keys that will not chain up to the root certificates in roots.pem.
+
+# Revocation
+
+Some Android OEM keys have been leaked.
+For that reason, many of the issuing certificates for attestations have been revoked.
+
+For instance, the key in the file [revoked-key.pem](revoked-key.pem) has been leaked.
+Its public key is
+
+```bash
+$ openssl pkey -in revoked-key.pem -pubout
+-----BEGIN PUBLIC KEY-----
+MIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAtctPD9EZ2n16S/0oZdfj
+MpcLNJmRK+okaqixYYZ/dFuy1lQLSAYaj2BtNw/FivMJg6EEw8uffAcgVdFxs8mc
+mIju7roxLhpLPfaNg8AMp2JyDz8LaNvfkXPYhARXKFTtsFvtP37AJZCALD1JMmFK
+Uz7qdzJzrUmbth2f5t/pOCKcX2HaPhVu9zvDOQBE8/H8M75gN+heyWPqBfHkQjyw
+ZRbJBLqcjn0wFDHgCWSk6cllUyaJoZPAG9tUxr1V1d9Sm/F/6IeDhKdIx8fJQQ/b
+mc7wN1fDNMDxntg87oIvnpNhak49QsHK0WPTKpytaTWdE59bqC/mQs0wNYmzE9MB
+TXsHKZZ99GJnPRVY8Ts155SbCQHGFVValdZ00Dh5BHR91AAbnxCwBDhwiii2dG6m
+/SpQFQCz3BBQZk/fT6XBDNre7ZE4ONDp/RxnmXA3xVLtbuWwUFua5pasj4kTZAdZ
+nq0hxDLMIgz/Vt58qNgLcq3ozxhDKzRUKYU6+dNe6SmJAgMBAAE=
+-----END PUBLIC KEY-----
+```
+
+The Corresponding certificate is in the file [revoked-crt.pem](revoked-crt.pem).
+This can be verified by inspecting the public key in the certificate:
+
+```bash
+$ openssl x509 -in revoked-crt.pem -noout -pubkey
+-----BEGIN PUBLIC KEY-----
+MIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAtctPD9EZ2n16S/0oZdfj
+MpcLNJmRK+okaqixYYZ/dFuy1lQLSAYaj2BtNw/FivMJg6EEw8uffAcgVdFxs8mc
+mIju7roxLhpLPfaNg8AMp2JyDz8LaNvfkXPYhARXKFTtsFvtP37AJZCALD1JMmFK
+Uz7qdzJzrUmbth2f5t/pOCKcX2HaPhVu9zvDOQBE8/H8M75gN+heyWPqBfHkQjyw
+ZRbJBLqcjn0wFDHgCWSk6cllUyaJoZPAG9tUxr1V1d9Sm/F/6IeDhKdIx8fJQQ/b
+mc7wN1fDNMDxntg87oIvnpNhak49QsHK0WPTKpytaTWdE59bqC/mQs0wNYmzE9MB
+TXsHKZZ99GJnPRVY8Ts155SbCQHGFVValdZ00Dh5BHR91AAbnxCwBDhwiii2dG6m
+/SpQFQCz3BBQZk/fT6XBDNre7ZE4ONDp/RxnmXA3xVLtbuWwUFua5pasj4kTZAdZ
+nq0hxDLMIgz/Vt58qNgLcq3ozxhDKzRUKYU6+dNe6SmJAgMBAAE=
+-----END PUBLIC KEY-----
+```
+
+To check the revocation status of this certificate, instead of using a CRL, as JSON file is published at URL
+[https://android.googleapis.com/attestation/status](https://android.googleapis.com/attestation/status)
+
+This file contains the serial numbers of all revoked certificates.
+So to check revocation, we need to extract the serial number of the certificate we want to check for revocation:
+
+```bash
+$ openssl x509 -in revoked-crt.pem -noout -serial | tr A-Z a-z
+serial=fe29ff268201c69ad7f515ae9085f902
+```
+
+Note that we use tr to convert the serial number to lowercase, as that is what is used in the revocation list.
+
+We can see the certificate is revoked by using the lowercase serial number as a key:
+
+```bash
+$ curl -s https://android.googleapis.com/attestation/status | jq .entries.fe29ff268201c69ad7f515ae9085f902
+{
+  "status": "REVOKED",
+  "reason": "KEY_COMPROMISE"
+}
+```
+
+Note that when retrieving the full chain from the logs, the attestation certificate is listed first,
+followed by one or more intermediate certificates, and finally the root certificate.
+As the attestation certificate is specific to the generated KeyStore key, the intermediate certificate(s) are the ones than need to be checked for revocation.
+
+To seperate the certificates in the certs.file, you can use the `split` utility. For instance:
+
+```bash
+$ split -d -a 1 -p "-----BEGIN CERTIFICATE-----" certs.pem crt
+```
+
+This will generate a number of files with names starting with "crt":
+```bash
+$ ls crt*
+crt0 crt1 crt2 crt3
+```
+
+In this case, 4 files are generated: the attestation certificate (crt0), two intermediates (crt1, crt2), and a root (crt3).
+The intermeidates are the ones to check, similar to revoked-crt.pem above.
 
 # Attestation
 
@@ -291,5 +382,7 @@ $ asn1tools convert -o jer KeyDescription.asn1 KeyDescription $HEX
     }
 }
 ```
+
+
 
 See [here](https://source.android.com/docs/security/features/keystore/attestation#keydescription-fields) for a reference of the Key Description fields.

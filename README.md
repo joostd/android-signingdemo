@@ -207,7 +207,7 @@ Note that when retrieving the full chain from the logs, the attestation certific
 followed by one or more intermediate certificates, and finally the root certificate.
 As the attestation certificate is specific to the generated KeyStore key, the intermediate certificate(s) are the ones than need to be checked for revocation.
 
-To seperate the certificates in the certs.file, you can use the `split` utility. For instance:
+To seperate the certificates in the certs.pem file, you can use the `split` utility. For instance:
 
 ```bash
 $ split -d -a 1 -p "-----BEGIN CERTIFICATE-----" certs.pem crt
@@ -220,7 +220,7 @@ crt0 crt1 crt2 crt3
 ```
 
 In this case, 4 files are generated: the attestation certificate (crt0), two intermediates (crt1, crt2), and a root (crt3).
-The intermeidates are the ones to check, similar to revoked-crt.pem above.
+The intermediates are the ones to check, similar to revoked-crt.pem above.
 
 # Attestation
 
